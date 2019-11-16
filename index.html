@@ -1,0 +1,233 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.7, minimum-scale=0.7">
+    <link rel="stylesheet" href="toggleswitch.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        canvas {
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: -1;
+        }
+        
+        #switch1 {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            z-index: 3;
+            zoom: 0.5;
+            -moz-transform: scale(0.5);
+            opacity: 0.4;
+        }
+        
+        .carousel {
+            data-interval: false;
+        }
+        
+        .rgbslider {
+            position: fixed;
+            bottom: 2%;
+            z-index: 3;
+            width: 10px;
+            height: 100px;
+            opacity: 0.4;
+        }
+        
+        #r {
+            right: 1%;
+        }
+        
+        #g {
+            right: 3%;
+        }
+        
+        #b {
+            right: 5%;
+        }
+    </style>
+    <script type="application/javascript">
+        var prev, curr;
+        var canvas, ctx;
+        var interval;
+        var width, height;
+        var w, h;
+        var size, pixelDim;
+        var rgb = [64, 73, 137];
+        var sliders;
+        var printAll;
+
+        function main() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas = document.getElementById("c");
+            document.body.addEventListener("click", click, false);
+
+            ctx = canvas.getContext("2d", {alpha: false});
+            ctx.canvas.width = width;
+            ctx.canvas.height = height;
+            pixelDim = 5;
+
+            w = Math.ceil(width / pixelDim);
+            h = Math.ceil(height / pixelDim);
+
+            prev = new Array(h);
+			curr = new Array(h);
+            for (var i = 0; i < prev.length; i++) {
+                prev[i] = new Array(w);
+				curr[i] = new Array(w);
+                for (var j = 0; j < prev[i].length; j++) {
+                    prev[i][j] = 0;
+                    curr[i][j] = 0;
+                    ctx.fillStyle = "rgb(" + (prev[i][j] + rgb[0]) + "," + (prev[i][j] + rgb[1]) + "," + (prev[i][j] + rgb[2]) + ")";
+                    ctx.fillRect(j * pixelDim, i * pixelDim, pixelDim, pixelDim);
+                }
+            }
+
+            sliders = document.getElementsByClassName("rgbslider");
+            sliders[0].addEventListener("input", updateRed);
+            sliders[0].value = rgb[0];
+            sliders[1].addEventListener("input", updateGreen);
+            sliders[1].value = rgb[1];
+            sliders[2].addEventListener("input", updateBlue);
+            sliders[2].value = rgb[2];
+
+            printAll = false;
+            setInterval(step, 20);
+            startStop();
+        }
+
+        function updateRed() {
+            rgb[0] = parseInt(sliders[0].value);
+            printAll = true;
+        }
+
+        function updateGreen() {
+            rgb[1] = parseInt(sliders[1].value);
+            printAll = true;
+        }
+
+        function updateBlue() {
+            rgb[2] = parseInt(sliders[2].value);
+            printAll = true;
+        }
+
+        function step() {
+            var top,
+                bottom,
+                left,
+                right;
+
+            for (var i = 0; i < h; i++) {
+                for (var j = 0; j < w; j++) {
+                    top = i != 0 ? prev[(i - 1)][j] : 0;
+                    bottom = i != h - 1 ? prev[(i + 1)][j] : 0;
+                    left = j != 0 ? prev[i][(j - 1)] : 0;
+                    right = j != w - 1 ? prev[i][(j + 1)] : 0;
+                    if (top == 0 && bottom == 0 && left == 0 && right == 0) {
+                        curr[i][j] = 0;
+                    } else {
+                        curr[i][j] = (top + bottom + left + right) / 2 - curr[i][j];
+                        if (curr[i][j] == 0) {
+                            continue;
+                        } else {
+                            if (curr[i][j] > 0) {
+                                curr[i][j] = Math.floor(curr[i][j]);
+                            } else {
+                                curr[i][j] = Math.ceil(curr[i][j] + 0.1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            var temp = prev;
+            prev = curr;
+            curr = temp;
+
+            render();
+        }
+
+        function render() {
+            for (var i = 0; i < h; i++) {
+                for (var j = 0; j < w; j++) {
+                    if (curr[i][j] == prev[i][j] && !printAll) {
+                        continue;
+                    } else {
+                        ctx.fillStyle = "rgb(" + (prev[i][j] + rgb[0]) + "," + (prev[i][j] + rgb[1]) + "," + (prev[i][j] + rgb[2]) + ")";
+                        ctx.fillRect(j * pixelDim, i * pixelDim, pixelDim, pixelDim);
+                    }
+                }
+            }
+
+            if (printAll) {
+                printAll = false;
+            }
+        }
+
+        function sleep(milliseconds) {
+            return new Promise(resolve => setTimeout(resolve, milliseconds));
+        }
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            w = Math.ceil(width / pixelDim);
+            h = Math.ceil(height / pixelDim);
+        }
+
+        async function drop() {
+            var n = Math.round(Math.random() * 400);
+            await sleep(n);
+            var r = Math.ceil(Math.random() * (w - 1));
+            var s = Math.ceil(Math.random() * (h - 1));
+            if (s == h - 1 || r == w - 1 || document.hidden) {
+                return;
+            }
+            prev[s][r] = Math.round(Math.random() * 255);
+        }
+
+        function startStop() {
+            if (!document.getElementById("switch1").children[0].checked) {
+                interval = setInterval(drop, 400);
+            } else {
+                clearInterval(interval);
+            }
+        }
+
+        function click(e) {
+            var xPosition = Math.round((e.clientX - 1) / pixelDim);
+            var yPosition = Math.round((e.clientY - 1) / pixelDim);
+            if (yPosition == h - 1 || xPosition == w - 1) {
+                return;
+            }
+            prev[yPosition][xPosition] = 32;
+        }
+    </script>
+</head>
+
+<body onload="main()" onresize="resize()">
+
+    <label class="switch" id="switch1">
+        <input type="checkbox" onclick="startStop()">
+        <span class="slider round"></span>
+    </label>
+
+    <input type="range" min="0" max="255" id="r" pixelDim="1" value="0" orient="vertical" class="rgbSlider">
+    <input type="range" min="0" max="255" id="g" pixelDim="1" value="0" orient="vertical" class="rgbSlider">
+    <input type="range" min="0" max="255" id="b" pixelDim="1" value="0" orient="vertical" class="rgbSlider">
+
+    <canvas id="c"></canvas>
+
+</body>
+
+</html>
